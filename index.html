@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>aHUS 臨床核對清單系統 | 童綜合醫院專業醫學評估介面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        :root {
+            --tungs-green: #009844;
+            --tungs-yellow: #fff200;
+            --tungs-blue-dark: #002d56;
+            --medical-border: #e2e8f0;
+            --medical-text-main: #1e293b;
+            --medical-text-muted: #64748b;
+            --success-green: #10b981;
+            --alert-red: #ef4444;
+            --warning-amber: #f59e0b;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            padding: 10px;
+            font-family: 'Inter', 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            color: var(--medical-text-main);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        @media (min-width: 768px) { body { padding: 30px 10px; } }
+
+        .a4-container {
+            width: 100%;
+            max-width: 210mm; 
+            margin-left: auto;
+            margin-right: auto;
+            background-color: #f1f5f9;
+            overflow-x: hidden; 
+        }
+
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid var(--medical-border);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        /* ----- 桌機版標準表格設定 ----- */
+        .table-responsive { width: 100%; border-radius: 8px; }
+        
+        table { 
+            width: 100%; 
+            border-collapse: separate; 
+            border-spacing: 0; 
+            table-layout: fixed; 
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--medical-border);
+            border-right: 1px solid var(--medical-border);
+            padding: 10px 8px; 
+            font-size: 13px;
+            vertical-align: middle;
+            word-wrap: break-word; 
+            overflow-wrap: break-word;
+        }
+
+        td:last-child { border-right: none; }
+        tr:last-child td { border-bottom: none; }
+
+        .header-main {
+            background: linear-gradient(135deg, var(--tungs-blue-dark) 0%, var(--tungs-green) 100%);
+            color: white; font-weight: 700; text-align: center; text-transform: uppercase;
+        }
+
+        .sub-category {
+            background-color: #f8fafc; font-weight: 600; color: var(--tungs-green);
+            border-left: 4px solid var(--tungs-green);
+        }
+
+        .label-row {
+            background-color: #f8fafc; font-weight: 600; color: var(--medical-text-muted);
+            font-size: 12px; text-align: center;
+        }
+
+        input[type="number"], select, input[type="text"], input[type="date"] {
+            width: 100%; border: 1.5px solid #cbd5e1; border-radius: 6px;
+            padding: 10px 6px; outline: none; font-size: 14px;
+            background-color: #fff; box-sizing: border-box; height: 44px; 
+            -webkit-appearance: none; appearance: none; transition: all 0.2s;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat; background-position: right 8px center;
+            background-size: 16px; padding-right: 28px;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--tungs-green) !important;
+            box-shadow: 0 0 0 3px rgba(0, 152, 68, 0.15);
+        }
+
+        .result-cell { font-weight: 700; border-radius: 4px; min-height: 18px; line-height: 1.3; }
+        .text-alert { color: var(--alert-red); }
+        .text-success { color: var(--success-green); }
+        .text-warning { color: var(--warning-amber); }
+        .text-neutral { color: var(--medical-text-muted); }
+
+        .fab-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+        .fab-main {
+            width: 50px; height: 50px; background: var(--tungs-green); border-radius: 14px;
+            box-shadow: 0 6px 16px rgba(0, 152, 68, 0.3); display: flex;
+            align-items: center; justify-content: center; color: white; cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .fab-main:hover { transform: scale(1.05); background-color: #00823a; }
+
+        .chart-card { background: #ffffff; border-radius: 16px; padding: 15px; margin-bottom: 20px; border: 1px solid var(--medical-border); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .chart-title { font-size: 15px; font-weight: 700; display: flex; align-items: center; margin-bottom: 12px; }
+        .chart-title::before { content: ''; display: inline-block; width: 4px; height: 14px; background: var(--tungs-green); margin-right: 8px; border-radius: 2px; }
+
+        .risk-badge { padding: 4px 10px; border-radius: 9999px; color: white; font-weight: 800; font-size: 11px; display: inline-block; }
+        .risk-low { background: #10b981; }
+        .risk-med { background: #f59e0b; }
+        .risk-high { background: #ef4444; }
+
+        .platelet-alert { display: none; background: #fef2f2; border: 1px solid #fee2e2; padding: 3px 8px; border-radius: 8px; color: #ef4444; font-weight: 700; font-size: 11px; }
+
+        .check-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
+        .check-icon { font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+        .check-text { font-size: 13px; color: #334155; line-height: 1.5; font-weight: 500;}
+        
+        .compliance-gauge { width: 110px; height: 110px; position: relative; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .gauge-svg { transform: rotate(-90deg); }
+        .gauge-bg { fill: none; stroke: #f1f5f9; stroke-width: 8; }
+        .gauge-progress { fill: none; stroke: var(--tungs-green); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease-out; }
+        .tungs-accent-border { border-top: 4px solid var(--tungs-green); }
+
+        /* =========================================================
+           無滑動卡片化響應式核心邏輯 (Responsive Card Layout)
+           ========================================================= */
+        @media screen and (max-width: 768px) {
+            .header-main h1 { font-size: 1.25rem; line-height: 1.3; margin-top: 10px;}
+            .compliance-gauge { width: 90px; height: 90px; margin: 0 auto; }
+            .gauge-svg { width: 90px; height: 90px; }
+            .gauge-bg, .gauge-progress { r: 40; cx: 45; cy: 45; }
+            #nhi-percent-text { font-size: 1.25rem; }
+            .glass-card { border-radius: 8px; }
+
+            /* 將所有表格元素轉為區塊顯示 */
+            table, thead, tbody, th, td, tr { display: block; width: 100%; }
+            
+            /* 隱藏原生表頭 (使用資料標籤 data-label 取代) */
+            .label-row { display: none !important; }
+
+            /* 每一個 tr 變成一張獨立的醫學數據卡片 */
+            tbody tr {
+                margin-bottom: 1rem;
+                border: 1px solid var(--medical-border);
+                border-radius: 0.75rem;
+                background: #ffffff;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+                overflow: hidden;
+            }
+
+            /* 特殊表格標題列樣式重置 */
+            tr.header-main, tr.sub-category {
+                border: none; box-shadow: none; border-radius: 0; 
+                margin-bottom: 0.5rem; background: transparent;
+            }
+            tr.header-main td, tr.sub-category td { border: none; }
+
+            /* 卡片內的儲存格設定 */
+            td {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                border-bottom: 1px solid #f1f5f9;
+                padding: 0.75rem 1rem;
+                text-align: right;
+                min-height: 48px;
+            }
+            td:last-child { border-bottom: none; }
+
+            /* 醫療項目標題 (卡片最上方的深色區塊) */
+            td.item-header {
+                display: block;
+                background-color: #f8fafc;
+                color: var(--tungs-blue-dark);
+                font-weight: 700;
+                text-align: left;
+                padding: 0.75rem 1rem;
+                border-bottom: 2px solid var(--tungs-green) !important;
+                font-size: 0.95rem;
+            }
+
+            /* 利用 data-label 屬性自動生成手機版輸入欄位前綴標題 */
+            td[data-label] { gap: 0.75rem; }
+            td[data-label]::before {
+                content: attr(data-label);
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: var(--medical-text-muted);
+                width: 35%; /* 保留固定比例給標籤文字 */
+                text-align: left;
+                flex-shrink: 0;
+            }
+
+            /* 確保輸入框佔滿剩餘空間 */
+            td[data-label] > input, td[data-label] > select, td[data-label] > div {
+                flex: 1; text-align: left; min-width: 0;
+            }
+            
+            td.result-cell { justify-content: flex-end; font-size: 14px; }
+            
+            /* PLASMIC Score 特殊卡片排版 */
+            .plasmic-table tr { display: flex; flex-wrap: wrap; }
+            .plasmic-table td.item-header { width: 100%; }
+            .plasmic-table td[data-label] { width: 50%; flex-direction: column; justify-content: center; gap: 0.5rem; }
+            .plasmic-table td[data-label]::before { width: 100%; text-align: center; }
+            .score-row { display: block; }
+            .score-row td { display: block; width: 100%; text-align: center; justify-content: center; border: none !important;}
+        }
+
+        @media print { .no-print { display: none !important; } body { background: white; padding: 0;} .a4-container { padding: 0;} }
+    </style>
+</head>
+<body>
+
+<div class="fab-container no-print">
+    <div class="fab-main" onclick="exportToImage()" title="保存為完整報告圖檔">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+    </div>
+</div>
+
+<div class="a4-container" id="mainContent">
+    <form id="checklistForm">
+        <header class="mb-6 text-center pt-2 md:pt-4">
+            <div class="flex flex-col items-center justify-center gap-2 mb-3">
+                <div class="flex items-center gap-3">
+                    <div class="relative w-12 h-12 md:w-14 md:h-14">
+                        <svg viewBox="0 0 100 100" class="w-full h-full">
+                            <circle cx="50" cy="50" r="48" fill="var(--tungs-yellow)" opacity="0.4" />
+                            <rect x="15" y="15" width="70" height="70" rx="18" fill="var(--tungs-green)" />
+                            <rect x="42" y="28" width="16" height="44" rx="4" fill="white" />
+                            <rect x="28" y="42" width="44" height="16" rx="4" fill="white" />
+                        </svg>
+                    </div>
+                    <div class="text-left">
+                        <div class="text-[var(--tungs-blue-dark)] font-black text-xl md:text-2xl leading-none tracking-tight">童綜合醫院</div>
+                        <div class="text-[var(--tungs-blue-dark)] text-[9px] md:text-[11px] font-bold tracking-tighter uppercase mt-1">Tungs' Taichung MetroHarbor Hospital</div>
+                    </div>
+                </div>
+            </div>
+            <h1 class="text-xl md:text-2xl font-extrabold text-slate-900 mb-1">aHUS 罕病通報/健保審查條件評估工具</h1>
+            <p class="text-slate-500 font-medium text-xs md:text-sm">Clinical Decision Support Tool</p>
+            <div class="w-24 md:w-32 h-1 bg-[var(--tungs-yellow)] mx-auto mt-2 rounded-full"></div>
+        </header>
+
+        <!-- 患者基本資訊區塊 -->
+        <div class="glass-card p-4 md:p-5 tungs-accent-border">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="flex items-center gap-3">
+                    <label class="w-20 md:w-24 font-bold text-slate-700 text-sm flex-shrink-0">填表日期</label>
+                    <input type="date" class="auto-date flex-1" id="form_date">
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="w-20 md:w-24 font-bold text-slate-700 text-sm flex-shrink-0">填表醫師</label>
+                    <input type="text" class="flex-1" placeholder="輸入醫師姓名">
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="w-20 md:w-24 font-bold text-slate-700 text-sm flex-shrink-0">患者年齡</label>
+                    <input type="number" inputmode="decimal" class="flex-1" placeholder="輸入年齡">
+                </div>
+                <div class="flex items-center gap-3">
+                    <label class="w-20 md:w-24 font-bold text-slate-700 text-sm flex-shrink-0">患者性別</label>
+                    <select class="flex-1">
+                        <option value="">請選擇</option>
+                        <option value="男">男 (Male)</option>
+                        <option value="女">女 (Female)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- aHUS 罕病健保事審條件檢核表 -->
+        <div class="glass-card border-2 border-green-100 mb-6">
+            <header class="bg-slate-50 px-4 py-3 md:px-5 border-b border-slate-200">
+                <h3 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-[var(--tungs-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                    aHUS 罕病健保事審條件檢核表
+                </h3>
+            </header>
+            <div class="p-4 md:p-5">
+                <div class="flex flex-col md:flex-row gap-6 md:gap-8 items-center mb-6">
+                    <div class="compliance-gauge">
+                        <svg class="gauge-svg" width="100%" height="100%" viewBox="0 0 100 100">
+                            <circle class="gauge-bg" cx="50" cy="50" r="44"></circle>
+                            <circle id="nhi-gauge-progress" class="gauge-progress" cx="50" cy="50" r="44" stroke-dasharray="276.4" stroke-dashoffset="276.4"></circle>
+                        </svg>
+                        <div class="absolute text-center">
+                            <div id="nhi-percent-text" class="text-xl md:text-2xl font-black text-[var(--tungs-green)]">0%</div>
+                            <div class="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-tighter mt-[-2px]">Match</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <div id="nhi-status-box" class="inline-block px-4 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-bold text-sm mb-2 border border-slate-200">
+                            數據不足
+                        </div>
+                        <p id="nhi-status-msg" class="text-sm text-slate-600 font-medium leading-relaxed">
+                            請在下方填寫完整數據以進行自動核對。
+                        </p>
+                        <div class="mt-3 p-3 bg-green-50/70 rounded-lg border border-green-100 text-left">
+                            <p class="text-[11px] text-green-800 leading-relaxed">
+                                <strong>💡 系統提示：</strong>此檢核表僅提供快速核對是否符合大部分要件。由於 aHUS 具高度異質性，並非所有患者發病當下皆能 100% 符合，評估後仍需彙整詳細病歷資料送審。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="text-xs font-bold text-[var(--tungs-blue-dark)] mb-2 border-l-4 border-[var(--tungs-green)] pl-2 uppercase">I. 給付對象核對 (治療反應不佳判定)</h4>
+                            <div id="list-eligibility" class="space-y-1"></div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-[var(--tungs-blue-dark)] mb-2 border-l-4 border-[var(--tungs-green)] pl-2 uppercase">II. 重症判定 - 必要條件 (共4項)</h4>
+                            <div id="list-essential" class="space-y-1"></div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-[var(--tungs-blue-dark)] mb-2 border-l-4 border-[var(--tungs-green)] pl-2 uppercase">IIII. TMA判定</h4>
+                            <div id="list-tma-判定" class="space-y-1"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="text-xs font-bold text-[var(--tungs-blue-dark)] mb-2 border-l-4 border-[var(--tungs-green)] pl-2 uppercase">III. 重症判定 - 次要條件 (Organ - At least 1)</h4>
+                            <div id="list-organ-damage" class="space-y-1"></div>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-[var(--tungs-blue-dark)] mb-2 border-l-4 border-[var(--tungs-green)] pl-2 uppercase">IV. 排除診斷核對 (Must Exclude All 7 Items)</h4>
+                            <div id="list-exclusion-detail" class="space-y-1"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Part 1: Inclusion Tests & Treatments -->
+        <div class="glass-card">
+            <div class="table-responsive">
+                <table>
+                    <colgroup><col width="30%"><col width="20%"><col width="25%"><col width="25%"></colgroup>
+                    <thead>
+                        <tr class="header-main">
+                            <td colspan="4">
+                                <div class="flex items-center justify-between px-2">
+                                    <span>aHUS疑似個案Inclusion tests Checklist</span>
+                                    <button type="button" onclick="resetEntireForm()" class="no-print bg-white/10 hover:bg-white/20 text-white border border-white/30 px-3 py-1 rounded text-[11px] font-bold transition-all shadow-sm">恢復預設</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="sub-category"><td colspan="4">治療紀錄</td></tr>
+                        <tr class="label-row"><td>治療項目</td><td>評估日期</td><td>紀錄</td><td>條件核對結果</td></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="item-header">Plasma Transfusion (施行次數/週)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, 'treatment')" id="in_pt_count" placeholder="輸入數值"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">Plasma Exchange (施行次數/週)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, 'treatment')" id="in_pe_count" placeholder="輸入數值"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">HD (施行次數/週)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select id="in_hd_count" onchange="calculateNHICompliance()"><option value="">請選擇</option><script>for(let i=1;i<=7;i++)document.write(`<option value="${i}">${i}次</option>`)</script></select></td><td data-label="核對結果" class="bg-slate-50 text-slate-400 italic text-center text-xs result-cell flex items-center justify-center">不顯示判定</td></tr>
+
+                        <tr class="sub-category"><td colspan="4">臨床表徵</td></tr>
+                        <tr class="label-row"><td>評估項目</td><td>評估日期</td><td>紀錄</td><td>條件核對結果</td></tr>
+                        <tr><td class="item-header">器官損傷</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'organ')" id="in_organ_count"><option value="">請選擇</option><option value="無異常">無異常</option><option value="1處">1處</option><option value="2處">2處</option><option value="3處">3處</option><option value="4處">4處</option><option value="5處">5處</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">腎臟系統</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'system')" id="in_renal_sys"><option value="">請選擇</option><option value="無異常">無異常</option><option value="AKI第一期">AKI第一期</option><option value="AKI第二期">AKI第二期</option><option value="AKI第三期">AKI第三期</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">腸胃系統</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'system')" id="in_gi_sys"><option value="">請選擇</option><option value="無異常">無異常</option><option value="腹痛、噁心、嘔吐">腹痛、噁心、嘔吐</option><option value="血便、消化道出血">血便、消化道出血</option><option value="腸道破裂">腸道破裂</option><option value="缺血性腸炎">缺血性腸炎</option><option value="腸血管栓塞">腸血管栓塞</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">神經系統</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'system')" id="in_neuro_sys"><option value="">請選擇</option><option value="無異常">無異常</option><option value="抽蓄(seizure)">抽蓄(seizure)</option><option value="栓塞(infarct)">栓塞(infarct)</option><option value="腦血管病變">腦血管病變</option><option value="其他">其他</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">呼吸系統</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'system')" id="in_resp_sys"><option value="">請選擇</option><option value="無異常">無異常</option><option value="呼吸衰竭">呼吸衰竭</option><option value="換氣困難">換氣困難</option><option value="其他">其他</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">心臟系統</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'system')" id="in_heart_sys"><option value="">請選擇</option><option value="無異常">無異常</option><option value="急性心衰竭">急性心衰竭</option><option value="急性心肺障礙">急性心肺障礙</option><option value="心律傳導障礙">心律傳導障礙</option><option value="其他">其他</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header">眼睛病變</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'system')"><option value="">請選擇</option><option value="無異常">無異常</option><option value="急性視網膜病變">急性視網膜病變</option><option value="脈較膜血管栓塞">脈較膜血管栓塞</option><option value="視神經盤水腫">視神經盤水腫</option><option value="玻璃體出血">玻璃體出血</option><option value="其他眼部症狀">其他眼部症狀</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Part 2: Continuous Monitoring (Rowspan 處理) -->
+        <div class="glass-card">
+            <div class="table-responsive">
+                <table>
+                    <colgroup><col width="30%"><col width="20%"><col width="25%"><col width="25%"></colgroup>
+                    <thead>
+                        <tr class="sub-category"><td colspan="4">連續監測重要指標</td></tr>
+                        <tr class="label-row"><td>檢驗項目</td><td>評估日期</td><td>紀錄</td><td>條件核對結果</td></tr>
+                    </thead>
+                    <tbody>
+                        <script>
+                            const trendItems = [
+                                { n: "Hemoglobin(g/dL)", c: "hb", l: "sd", p: "12-18", id: "in_hb" },
+                                { n: "Platelet(10^3/μL)", c: "plt", l: "plt", id: "in_plt", p: "150-520" },
+                                { n: "Reticulocyte(%)", c: "retic", l: "retic", id: "in_retic", p: "0.45-2.28%" },
+                                { n: "sCr", c: "scr", l: "scr", id: "in_scr", p: "> 2" },
+                                { n: "LDH", c: "ldh", l: "ldh", p: "106-221", id: "in_ldh" },
+                                { n: "Haptoglobin(mg/dL)", c: "hap", l: "hap", id: "in_hap", p: "30-200" },
+                                { n: "血壓", c: "bp", l: "sd", p: "輸入數值" }
+                            ];
+                            trendItems.forEach(t => {
+                                for(let i=0; i<5; i++){
+                                    let inputHtml = '';
+                                    if(t.c === 'bp') {
+                                        inputHtml = `
+                                            <div class="flex gap-1 items-center w-full">
+                                                <input type="number" class="track-bp-sys flex-1 min-w-0 px-1 text-center" inputmode="decimal" oninput="logicCheck(this, 'sd')" placeholder="收縮壓">
+                                                <span class="text-slate-300">/</span>
+                                                <input type="number" class="track-bp-dia flex-1 min-w-0 px-1 text-center" inputmode="decimal" oninput="logicCheck(this, 'sd')" placeholder="舒張壓">
+                                            </div>
+                                        `;
+                                    } else {
+                                        inputHtml = `<input type="text" class="track-${t.c}" inputmode="decimal" ${i===0 && t.id ? `id="${t.id}"` : ''} oninput="logicCheck(this, '${t.l}')" ${t.n.includes('Retic')?'onblur="formatPercent(this)"':''} placeholder="${t.p}">`;
+                                    }
+
+                                    // 使用 Tailwind 的 md 區塊與自定義的 item-header 在不同平台上無縫切換顯示邏輯
+                                    document.write(`<tr>
+                                        ${i===0 ? `<td rowspan="5" class="hidden md:table-cell font-bold text-slate-700 bg-green-50/30 align-middle text-center border-r border-green-100">${t.n}</td>` : ''}
+                                        <td class="md:hidden item-header bg-green-50/50 text-green-800">${t.n} (第 ${i+1} 次)</td>
+                                        <td data-label="評估日期"><input type="date" class="auto-date date-${t.c}"></td>
+                                        <td data-label="評估紀錄">${inputHtml}</td>
+                                        <td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td>
+                                    </tr>`);
+                                }
+                            });
+                        </script>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Part 3: Other Lab Tests -->
+        <div class="glass-card">
+            <div class="table-responsive">
+                <table>
+                    <colgroup><col width="30%"><col width="20%"><col width="25%"><col width="25%"></colgroup>
+                    <thead><tr class="sub-category"><td colspan="4">其他檢測指標</td></tr></thead>
+                    <tbody>
+                        <script>
+                            const otherLab = [
+                                { n: "BUN", l: "bun", p: "7-22" }, 
+                                { n: "EGFR", l: "egfr", p: "> 90" }, 
+                                { n: "尿蛋白", l: "protein", p: "< 14" },
+                                { n: "AST(U/L)", l: "liver", p: "8-40" }, 
+                                { n: "ALT(U/L)", l: "liver", p: "8-40" }
+                            ];
+                            otherLab.forEach(o => {
+                                document.write(`<tr><td class="item-header font-medium">${o.n}</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, '${o.l}')" placeholder="${o.p}"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>`);
+                            });
+                        </script>
+                        <tr>
+                            <td class="item-header font-medium">Total bilirubin (mg/dL)</td>
+                            <td data-label="評估日期"><input type="date" class="auto-date"></td>
+                            <td data-label="評估紀錄"><input type="number" inputmode="decimal" id="in_tbil" oninput="handleBilirubin('total')" placeholder="0.2-1.2"></td>
+                            <td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]" id="res_tbil"></td>
+                        </tr>
+                        <tr>
+                            <td class="item-header font-medium">Indirect bilirubin (mg/dL)</td>
+                            <td data-label="評估日期"><input type="date" class="auto-date"></td>
+                            <td data-label="評估紀錄"><input type="number" inputmode="decimal" id="in_ibil" oninput="handleBilirubin('indirect')" placeholder="0.2-1.0"></td>
+                            <td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]" id="res_ibil"></td>
+                        </tr>
+                        <tr>
+                            <td class="item-header font-medium">Direct bilirubin (mg/dL)</td>
+                            <td data-label="評估日期"><input type="date" class="auto-date"></td>
+                            <td data-label="評估紀錄"><input type="number" inputmode="decimal" id="in_dbil" oninput="handleBilirubin('direct')" placeholder="0-0.5"></td>
+                            <td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]" id="res_dbil"></td>
+                        </tr>
+                        <tr><td class="item-header font-medium">Schistocyte(%)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'schisto')" id="in_schisto"><option value="">請選擇</option><option value="未檢測">未檢測</option><option value="Negative">Negative</option><option value="Postive">Postive</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Part 4: Gene & Imaging -->
+        <div class="glass-card">
+            <div class="table-responsive">
+                <table>
+                    <colgroup><col width="30%"><col width="20%"><col width="25%"><col width="25%"></colgroup>
+                    <thead><tr class="sub-category"><td colspan="4">基因檢測 / Biopsy / Medical Imaging</td></tr></thead>
+                    <tbody>
+                        <tr><td class="item-header font-medium">aHUS相關基因</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'gene')"><option value="">請選擇</option><option value="未檢測">未檢測</option><option value="Negative">Negative</option><option value="Postive">Postive</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <script>
+                            const biopsyItems = [
+                                { n: "Renal biopsy", id: "in_renal_biopsy" },
+                                { n: "Other biopsy", id: "in_other_biopsy" },
+                                { n: "Brain CT or MRI", id: "in_brain_imaging" },
+                                { n: "Other CT or MRI", id: "in_other_imaging" }
+                            ];
+                            biopsyItems.forEach(x => {
+                                document.write(`<tr><td class="item-header font-medium">${x.n}</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select id="${x.id}" onchange="logicCheck(this, 'biopsy')"><option value="">請選擇</option><option value="未施行">未施行</option><option value="無異常">無異常</option><option value="Thrombosis">Thrombosis</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>`);
+                            });
+                            ["EKG", "Heart sonography"].forEach(x => {
+                                document.write(`<tr><td class="item-header font-medium">${x}</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'heart')"><option value="">請選擇</option><option value="未施行">未施行</option><option value="異常">異常</option><option value="正常">正常</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>`);
+                            });
+                        </script>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Part 5: Exclusion Tests -->
+        <div class="glass-card">
+            <div class="table-responsive">
+                <table>
+                    <colgroup><col width="30%"><col width="20%"><col width="25%"><col width="25%"></colgroup>
+                    <thead><tr class="header-main"><td colspan="4">Exclusion tests Checklist (排除診斷)</td></tr></thead>
+                    <tbody>
+                        <tr><td class="item-header font-bold">ADAMTS13 (PE前)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="text" inputmode="decimal" oninput="logicCheck(this, 'adamts')" id="in_adamts" onblur="formatPercent(this)" placeholder="> 10%"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- PLASMIC SCORE -->
+        <div class="glass-card border-green-200">
+            <div class="table-responsive">
+                <table class="plasmic-table">
+                    <colgroup><col width="60%"><col width="20%"><col width="20%"></colgroup>
+                    <thead>
+                        <tr class="sub-category">
+                            <td colspan="3">
+                                <div class="flex items-center justify-between py-1 px-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[var(--tungs-blue-dark)] font-bold text-sm md:text-base">排除TTP - PLASMIC Score</span>
+                                        <a href="https://www.mdcalc.com/calc/10200/plasmic-score-ttp#pearls-pitfalls" target="_blank" class="no-print text-[10px] bg-slate-200 text-slate-600 px-2 py-0.5 rounded border border-slate-300 font-bold hover:bg-slate-300 transition-colors">EBM</a>
+                                    </div>
+                                    <button type="button" onclick="resetPlasmic()" class="no-print px-3 py-1.5 bg-white text-[var(--tungs-green)] border border-green-200 rounded text-[11px] font-bold hover:bg-green-50 shadow-sm transition-all">重新計分</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr class="label-row"><td>評估細項</td><td>YES</td><td>NO</td></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="item-header font-medium text-slate-700">Platelet count &lt; 30 x 10⁹/L</td><td data-label="YES" class="text-center"><input type="radio" name="p0" value="1" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td><td data-label="NO" class="text-center"><input type="radio" name="p0" value="0" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td></tr>
+                        <tr><td class="item-header font-medium text-slate-700">Hemolysis (Retic &gt;2.5%, Hapto undetectable, iBil &gt;2.0)</td><td data-label="YES" class="text-center"><input type="radio" name="p1" value="1" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td><td data-label="NO" class="text-center"><input type="radio" name="p1" value="0" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td></tr>
+                        <tr><td class="item-header font-medium text-slate-700">Active cancer</td><td data-label="YES" class="text-center"><input type="radio" name="p2" value="0" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td><td data-label="NO" class="text-center"><input type="radio" name="p2" value="1" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td></tr>
+                        <tr><td class="item-header font-medium text-slate-700">History of solid-organ or stem-cell transplant</td><td data-label="YES" class="text-center"><input type="radio" name="p3" value="0" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td><td data-label="NO" class="text-center"><input type="radio" name="p3" value="1" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td></tr>
+                        <tr><td class="item-header font-medium text-slate-700">MCV &lt; 90 fL</td><td data-label="YES" class="text-center"><input type="radio" name="p4" value="1" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td><td data-label="NO" class="text-center"><input type="radio" name="p4" value="0" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td></tr>
+                        <tr><td class="item-header font-medium text-slate-700">INR &lt; 1.5</td><td data-label="YES" class="text-center"><input type="radio" name="p5" value="1" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td><td data-label="NO" class="text-center"><input type="radio" name="p5" value="0" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td></tr>
+                        <tr><td class="item-header font-medium text-slate-700">Creatinine &lt; 2.0 mg/dL</td><td data-label="YES" class="text-center"><input type="radio" name="p6" value="1" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td><td data-label="NO" class="text-center"><input type="radio" name="p6" value="0" onclick="calcPlasmic()" class="w-5 h-5 accent-[var(--tungs-green)]"></td></tr>
+                        <tr class="bg-slate-800 text-white font-bold score-row">
+                            <td class="item-header bg-slate-800 text-white md:text-right tracking-wide pr-4 border-none !important">綜合評估結果</td>
+                            <td colspan="2" class="text-center py-3">
+                                <div id="p_score_val" class="text-lg mb-1">0 分</div>
+                                <div id="p_risk_tag"></div>
+                                <div id="p_final_res" class="text-[11px] mt-1 text-slate-300"></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- DIC, Infection, Cobalamin, Drugs -->
+        <div class="glass-card">
+            <div class="table-responsive">
+                <table>
+                    <colgroup><col width="30%"><col width="20%"><col width="25%"><col width="25%"></colgroup>
+                    <thead><tr class="sub-category"><td colspan="4">排除 DIC</td></tr></thead>
+                    <tbody>
+                        <tr><td class="item-header font-medium">PT (sec)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, 'pt')" id="in_dic_pt" placeholder="9.7-11.8"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header font-medium">aPTT (sec)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, 'aptt')" id="in_dic_aptt" placeholder="24.6-31.2"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header font-medium">Fibrinogen (mg/dL)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, 'fibrinogen')" id="in_dic_fib" placeholder="200-400"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header font-medium">FDP (μg/mL)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, 'fdp')" id="in_dic_fdp" placeholder="< 5"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header font-medium">D-dimer (mg/L FEU)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><input type="number" inputmode="decimal" oninput="logicCheck(this, 'ddimer')" id="in_dic_dimer" placeholder="< 0.55"></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                    </tbody>
+                    <thead><tr class="sub-category"><td colspan="4">排除 Antiphospholipid syndrome</td></tr></thead>
+                    <tbody>
+                        <tr><td class="item-header font-medium">Lupus Anticoagulant (LA)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'infection')" id="in_aps_la"><option value="">請選擇</option><option value="未檢測">未檢測</option><option value="Negative">Negative</option><option value="Postive">Postive</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header font-medium">Anti-Cardiolipin Antibodies(ACA)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'aca')" id="in_aps_aca"><option value="">請選擇</option><option value="未檢測">未檢測</option><option value="Negative">Negative</option><option value="Postive">Postive</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                        <tr><td class="item-header font-medium">Anti-β2-Glycoprotein I(Aβ2GPI)</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'ab2gpi')" id="in_aps_ab2"><option value="">請選擇</option><option value="未檢測">未檢測</option><option value="Negative">Negative</option><option value="Postive">Postive</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>
+                    </tbody>
+                    <thead><tr class="sub-category"><td colspan="4">排除 Infection</td></tr></thead>
+                    <tbody>
+                        <script>
+                            const infList = ["E.coli:O157", "Shiga toxin", "S. Pneumoniae", "Influenza"];
+                            infList.forEach((x, i) => {
+                                document.write(`<tr><td class="item-header font-medium">${x}</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'infection')" id="in_inf_${i}"><option value="">請選擇</option><option value="未檢測">未檢測</option><option value="Negative">Negative</option><option value="Postive">Postive</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>`);
+                            });
+                        </script>
+                    </tbody>
+                    <thead><tr class="sub-category"><td colspan="4">排除 Cobalamin C (至少一項)</td></tr></thead>
+                    <tbody>
+                        <script>
+                            const cobList = ["Vitamin B12", "Homocysteine", "Methylmalonic acid", "串聯質譜儀檢測"];
+                            cobList.forEach((x, i) => {
+                                document.write(`<tr><td class="item-header font-medium">${x}</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'cobalamin')" id="in_cob_${i}"><option value="">請選擇</option><option value="未檢測">未檢測</option><option value="High">High</option><option value="Normal Range">Normal Range</option><option value="Deficient/Low">Deficient/Low</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>`);
+                            });
+                        </script>
+                    </tbody>
+                    <thead><tr class="sub-category"><td colspan="4">排除 Drug & 其他因素</td></tr></thead>
+                    <tbody>
+                        <script>
+                            const drugList = ["Calcineurin inhibitors", "Chemotherapy", "Platelet inhibitor", "Oral contraceptive", "Malignant HTN", "HELLP"];
+                            drugList.forEach((x, i) => {
+                                document.write(`<tr><td class="item-header font-medium">${x}</td><td data-label="評估日期"><input type="date" class="auto-date"></td><td data-label="評估紀錄"><select onchange="logicCheck(this, 'drug')" id="in_drug_${i}"><option value="">請選擇</option><option value="排除">排除</option><option value="無法排除">無法排除</option></select></td><td data-label="核對結果" class="result-cell text-[12px] md:text-[13px]"></td></tr>`);
+                            });
+                        </script>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section: Charts -->
+        <section class="mt-8 md:mt-10 no-print">
+            <h2 class="text-lg md:text-xl font-bold text-slate-800 mb-4 md:mb-6 flex items-center gap-2">
+                <svg class="w-5 h-5 text-[var(--tungs-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                各項檢測值趨勢視覺化分析
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="chart-card"><h3 class="chart-title text-green-700">Hb 趨勢</h3><div class="h-40 md:h-48 w-full"><canvas id="chart-hb"></canvas></div></div>
+                <div class="chart-card">
+                    <div class="flex justify-between items-center mb-3"><h3 class="chart-title text-red-600 mb-0">Platelet 趨勢</h3><div id="plt-alert-tag" class="platelet-alert flex gap-1 items-center"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span><span>降幅 > 25%</span></div></div>
+                    <div class="h-40 md:h-48 w-full"><canvas id="chart-plt"></canvas></div>
+                </div>
+                <div class="chart-card"><h3 class="chart-title text-emerald-600">Retic 趨勢</h3><div class="h-40 md:h-48 w-full"><canvas id="chart-retic"></canvas></div></div>
+                <div class="chart-card"><h3 class="chart-title text-amber-600">sCr 趨勢</h3><div class="h-40 md:h-48 w-full"><canvas id="chart-scr"></canvas></div></div>
+                <div class="chart-card"><h3 class="chart-title text-indigo-600">LDH 趨勢</h3><div class="h-40 md:h-48 w-full"><canvas id="chart-ldh"></canvas></div></div>
+                <div class="chart-card"><h3 class="chart-title text-pink-600">Hapto 趨勢</h3><div class="h-40 md:h-48 w-full"><canvas id="chart-hap"></canvas></div></div>
+                <div class="chart-card">
+                    <h3 class="chart-title text-slate-600">血壓 趨勢 (收縮/舒張)</h3>
+                    <div class="h-40 md:h-48 w-full"><canvas id="chart-bp"></canvas></div>
+                </div>
+            </div>
+            <div class="text-center mt-6 mb-10">
+                <button type="button" onclick="updateCharts()" class="px-8 py-3 bg-[var(--tungs-green)] text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:bg-[#00823a] transition-all transform hover:-translate-y-0.5 active:translate-y-0">手動更新趨勢圖</button>
+            </div>
+        </section>
+    </form>
+</div>
+
+<script>
+    let charts = {};
+
+    function exportToImage() {
+        const element = document.getElementById('mainContent');
+        window.scrollTo(0, 0);
+        
+        // 為了確保所有圖檔皆匯出為專業的桌機A4排版模式 (防止被手機版面切斷或影響醫學報告正式性)
+        // 強制注入 1024 像素的視窗寬度，這會觸發 html2canvas 採用桌機版 CSS Media Query
+        const targetWidth = 1024;
+
+        const fab = document.querySelector('.fab-main');
+        const originalHtml = fab.innerHTML;
+        fab.innerHTML = '<svg class="animate-spin w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+
+        html2canvas(element, {
+            scale: 2, 
+            useCORS: true, 
+            logging: false, 
+            backgroundColor: '#f1f5f9',
+            width: targetWidth,
+            windowWidth: targetWidth, 
+            onclone: (clonedDoc) => {
+                const clonedElement = clonedDoc.getElementById('mainContent');
+                clonedElement.style.width = targetWidth + 'px';
+                clonedElement.style.maxWidth = 'none';
+                clonedElement.style.padding = '20px 40px'; 
+            }
+        }).then(canvas => {
+            try {
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.style.display = 'none'; link.href = url;
+                    link.download = `aHUS_Assessment_${new Date().toISOString().slice(0,10)}.png`;
+                    document.body.appendChild(link); link.click();
+                    setTimeout(() => { document.body.removeChild(link); window.URL.revokeObjectURL(url); fab.innerHTML = originalHtml; }, 100);
+                }, 'image/png', 1.0);
+            } catch (e) {
+                const imgData = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = imgData; link.download = `aHUS_Assessment_${new Date().toISOString().slice(0,10)}.png`;
+                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                fab.innerHTML = originalHtml;
+            }
+        });
+    }
+
+    function resetEntireForm() {
+        document.getElementById('checklistForm').reset();
+        document.querySelectorAll('.result-cell').forEach(el => { el.innerText = ''; el.className = 'result-cell'; });
+        resetPlasmic();
+        const today = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('.auto-date').forEach(i => i.value = today);
+        updateCharts();
+        calculateNHICompliance();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const plateletAlertPlugin = {
+        id: 'plateletAlertPlugin',
+        afterDatasetsDraw(chart) {
+            if (chart.canvas.id !== 'chart-plt') return;
+            const { ctx, data, scales: { x, y } } = chart;
+            const dataset = data.datasets[0];
+            const meta = chart.getDatasetMeta(0);
+            const values = dataset.data;
+            ctx.save();
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold 10px Inter, sans-serif';
+            for (let j = 1; j < values.length; j++) {
+                if (values[j] === null) continue;
+                let hasAlert = false;
+                for (let i = 0; i < j; i++) {
+                    if (values[i] === null || values[i] === 0) continue;
+                    if ((values[i] - values[j]) / values[i] > 0.25) { hasAlert = true; break; }
+                }
+                if (hasAlert) {
+                    const point = meta.data[j];
+                    if (point) {
+                        const text = "25%↓";
+                        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.roundRect(point.x - 22, point.y - 28, 44, 18, 4); ctx.fill();
+                        ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 1; ctx.stroke();
+                        ctx.fillStyle = '#ef4444'; ctx.fillText(text, point.x, point.y - 19);
+                    }
+                }
+            }
+            ctx.restore();
+        }
+    };
+
+    function handleBilirubin(triggerType) {
+        const tbil = document.getElementById('in_tbil');
+        const ibil = document.getElementById('in_ibil');
+        const dbil = document.getElementById('in_dbil');
+        
+        const tVal = parseFloat(tbil.value);
+        const iVal = parseFloat(ibil.value);
+        const dVal = parseFloat(dbil.value);
+
+        if (!isNaN(tVal)) {
+            if (triggerType === 'indirect' && !isNaN(iVal)) {
+                dbil.value = (tVal - iVal).toFixed(2);
+            } else if (triggerType === 'direct' && !isNaN(dVal)) {
+                ibil.value = (tVal - dVal).toFixed(2);
+            } else if (triggerType === 'total') {
+                if (!isNaN(iVal)) {
+                    dbil.value = (tVal - iVal).toFixed(2);
+                } else if (!isNaN(dVal)) {
+                    ibil.value = (tVal - dVal).toFixed(2);
+                }
+            }
+        }
+
+        logicCheck(tbil, 'tbil'); logicCheck(ibil, 'ibil'); logicCheck(dbil, 'dbil');
+    }
+
+    function logicCheck(el, type) {
+        const val = el.value;
+        const num = parseFloat(val.replace(/,/g, ''));
+        const res = el.parentElement.closest('td').nextElementSibling;
+        let text = ""; let style = "text-neutral";
+        if (val === "" || val === "請選擇") { res.innerText = ""; return; }
+        switch(type) {
+            case 'treatment':
+                text = (num >= 4) ? "符合申請條件" : "需解釋低於4次原因";
+                style = (num >= 4) ? "text-success" : "text-alert"; break;
+            case 'organ': case 'system':
+                text = (val === "無異常") ? "無異常" : "有利證據";
+                style = (val === "無異常") ? "text-neutral" : "text-success"; break;
+            case 'sd':
+                text = "依標準差判斷"; style = "text-warning"; break;
+            case 'plt':
+                text = (num < 150) ? "符合條件" : (num >= 150 && num <= 520 ? "正常區間" : "異常");
+                style = (num < 150) ? "text-success" : (num >= 150 && num <= 520 ? "text-neutral" : "text-alert"); 
+                updatePlasmicAuto(); break;
+            case 'retic':
+                text = (num > 2.28) ? "符合條件" : (num >= 0.45 && num <= 2.28 ? "正常區間" : "異常");
+                style = (num > 2.28) ? "text-success" : (num >= 0.45 && num <= 2.28 ? "text-neutral" : "text-alert"); 
+                updatePlasmicAuto(); break;
+            case 'scr':
+                text = (num > 2) ? "符合條件" : "正常區間";
+                style = (num > 2) ? "text-success" : "text-neutral"; 
+                updatePlasmicAuto(); break;
+            case 'bun':
+                text = (num > 22) ? "異常" : (num >= 7 && num <= 22 ? "正常" : "異常");
+                style = (num > 22 || num < 7) ? "text-alert" : "text-success"; break;
+            case 'egfr':
+                text = (num < 90) ? "異常" : "正常";
+                style = (num < 90) ? "text-alert" : "text-success"; break;
+            case 'protein':
+                text = (num > 14) ? "異常" : "正常";
+                style = (num > 14) ? "text-alert" : "text-success"; break;
+            case 'liver':
+                text = (num >= 8 && num <= 40) ? "正常" : "異常";
+                style = (num >= 8 && num <= 40) ? "text-success" : "text-alert"; break;
+            case 'ldh':
+                text = (num > 221) ? "符合條件" : (num >= 106 && num <= 221 ? "正常區間" : "異常");
+                style = (num > 221) ? "text-success" : (num >= 106 && num <= 221 ? "text-neutral" : "text-alert"); break;
+            case 'dbil':
+                text = (num > 0.5) ? "異常" : (num >= 0 && num <= 0.5 ? "正常" : "異常");
+                style = (num > 0.5) ? "text-alert" : "text-success"; break;
+            case 'tbil':
+                text = (num > 1.2) ? "異常" : (num >= 0.2 && num <= 1.2 ? "正常" : "異常");
+                style = (num > 1.2 || num < 0.2) ? "text-alert" : "text-success"; break;
+            case 'ibil':
+                text = (num > 1.0) ? "異常" : (num >= 0.2 && num <= 1.0 ? "正常" : "異常");
+                style = (num > 1.0 || num < 0.2) ? "text-alert" : "text-success"; break;
+            case 'hap':
+                text = (num < 30) ? "符合條件" : (num >= 30 && num <= 200 ? "正常區間" : "異常");
+                style = (num < 30) ? "text-success" : (num >= 30 && num <= 200 ? "text-neutral" : "text-alert"); 
+                updatePlasmicAuto(); break;
+            case 'schisto':
+                text = (val === "Postive") ? "符合條件" : "建議持續監測";
+                style = (val === "Postive") ? "text-success" : "text-warning"; break;
+            case 'gene':
+                text = (val === "Postive") ? "有利證據" : "依臨床資訊送審";
+                style = (val === "Postive") ? "text-success" : "text-warning"; break;
+            case 'biopsy':
+                text = (val === "Thrombosis") ? "有利證據" : "視情況施作";
+                style = (val === "Thrombosis") ? "text-success" : "text-warning"; break;
+            case 'heart':
+                text = (val === "異常") ? "有利證據" : "視情況施作";
+                style = (val === "異常") ? "text-success" : "text-warning"; break;
+            case 'adamts':
+                const a_v = parseFloat(val.replace('%',''));
+                text = (a_v >= 10) ? "符合條件" : "無法排除疑似TTP";
+                style = (a_v >= 10) ? "text-success" : "text-alert"; break;
+            case 'pt':
+                text = (num >= 9.7 && num <= 11.8) ? "符合條件" : "建議排除可能性";
+                style = (num >= 9.7 && num <= 11.8) ? "text-success" : "text-alert"; break;
+            case 'aptt':
+                text = (num >= 24.6 && num <= 31.2) ? "符合條件" : "建議排除可能性";
+                style = (num >= 24.6 && num <= 31.2) ? "text-success" : "text-alert"; break;
+            case 'fibrinogen':
+                text = (num >= 200 && num <= 400) ? "符合條件" : "建議排除可能性";
+                style = (num >= 200 && num <= 400) ? "text-success" : "text-alert"; break;
+            case 'fdp':
+                text = (num < 5) ? "符合條件" : "建議排除可能性";
+                style = (num < 5) ? "text-success" : "text-alert"; break;
+            case 'ddimer':
+                text = (num < 0.55) ? "符合條件" : "建議排除可能性";
+                style = (num < 0.55) ? "text-success" : "text-alert"; break;
+            case 'infection':
+                text = (val === "Negative") ? "符合條件" : "需排除";
+                style = (val === "Negative") ? "text-success" : "text-alert"; break;
+            case 'aca':
+                text = (val === "Negative") ? "符合條件" : "建議排除";
+                style = (val === "Negative") ? "text-success" : "text-alert"; break;
+            case 'ab2gpi':
+                text = (val === "Negative") ? "符合條件" : "建議排除";
+                style = (val === "Negative") ? "text-success" : "text-alert"; break;
+            case 'cobalamin':
+                text = (val === "Normal Range") ? "符合條件" : "建議監測";
+                style = (val === "Normal Range") ? "text-success" : "text-warning"; break;
+            case 'drug':
+                text = (val === "排除") ? "符合條件" : "建議排除";
+                style = (val === "排除") ? "text-success" : "text-alert"; break;
+        }
+        res.innerText = text; res.className = "result-cell " + style;
+        updateCharts(); calculateNHICompliance();
+    }
+
+    function calcPlasmic() {
+        let score = 0; let counted = 0;
+        for(let i=0; i<7; i++){
+            const rb = document.querySelector(`input[name="p${i}"]:checked`);
+            if(rb) { score += parseInt(rb.value); counted++; }
+        }
+        if(counted === 0) return;
+        document.getElementById('p_score_val').innerText = score + " 分";
+        const tag = document.getElementById('p_risk_tag');
+        const finalRes = document.getElementById('p_final_res');
+        if(score <= 4) { tag.innerHTML = '<span class="risk-badge risk-low shadow-sm">低度風險 (≤4)</span>'; finalRes.innerText = "有機會排除TTP"; }
+        else if(score === 5) { tag.innerHTML = '<span class="risk-badge risk-med shadow-sm">中度風險 (=5)</span>'; finalRes.innerText = "有機會排除TTP"; }
+        else { tag.innerHTML = '<span class="risk-badge risk-high shadow-sm">高度風險 (≥6)</span>'; finalRes.innerText = "暫時無法排除TTP"; }
+    }
+
+    function updatePlasmicAuto() {
+        const getWorstValueForPlasmic = (className, type = 'min') => {
+            const vals = Array.from(document.querySelectorAll('.' + className))
+                .map(i => parseFloat(i.value.replace('%','').replace(/,/g, '')))
+                .filter(v => !isNaN(v));
+            return vals.length > 0 ? (type === 'min' ? Math.min(...vals) : Math.max(...vals)) : NaN;
+        };
+
+        const plt = getWorstValueForPlasmic('track-plt', 'min');
+        const hap = getWorstValueForPlasmic('track-hap', 'min');
+        const retic = getWorstValueForPlasmic('track-retic', 'max');
+        const scr = getWorstValueForPlasmic('track-scr', 'max');
+
+        if(!isNaN(plt)) { document.getElementsByName('p0')[plt < 30 ? 0 : 1].checked = true; }
+        if(!isNaN(hap) || !isNaN(retic)) { document.getElementsByName('p1')[(retic > 2.5 || (hap > 0 && hap < 30)) ? 0 : 1].checked = true; }
+        if(!isNaN(scr)) { document.getElementsByName('p6')[scr < 2.0 ? 0 : 1].checked = true; }
+        calcPlasmic();
+    }
+
+    function resetPlasmic() {
+        document.querySelectorAll('input[name^="p"]').forEach(r => r.checked = false);
+        document.getElementById('p_score_val').innerText = "0 分";
+        document.getElementById('p_risk_tag').innerHTML = "";
+        document.getElementById('p_final_res').innerText = "";
+    }
+
+    function updateCharts() {
+        const fields = ['hb','plt','retic','scr','ldh','hap','bp'];
+        fields.forEach(f => {
+            if(f === 'bp') {
+                const sysInputs = document.querySelectorAll(`.track-bp-sys`);
+                const diaInputs = document.querySelectorAll(`.track-bp-dia`);
+                const sysData = Array.from(sysInputs).map(i => parseFloat(i.value) || null);
+                const diaData = Array.from(diaInputs).map(i => parseFloat(i.value) || null);
+                if(charts.bp) {
+                    charts.bp.data.datasets[0].data = sysData;
+                    charts.bp.data.datasets[1].data = diaData;
+                    charts.bp.update();
+                }
+                return;
+            }
+            const inputs = document.querySelectorAll(`.track-${f}`);
+            const data = Array.from(inputs).map(i => {
+                const v = parseFloat(i.value.replace('%','').replace(/,/g, ''));
+                return isNaN(v) ? null : v;
+            });
+            if(charts[f]) { charts[f].data.datasets[0].data = data; charts[f].update(); }
+            if(f === 'plt') {
+                let hasAlert = false; const v = data.filter(x => x !== null);
+                if(v.length >= 2) { for(let i=0; i<v.length; i++) for(let j=i+1; j<v.length; j++) if(v[i] > 0 && (v[i]-v[j])/v[i] > 0.25) hasAlert = true; }
+                document.getElementById('plt-alert-tag').style.display = hasAlert ? 'flex' : 'none';
+            }
+        });
+    }
+
+    function calculateNHICompliance() {
+        const getWorstValue = (className, type = 'min') => {
+            const vals = Array.from(document.querySelectorAll('.' + className))
+                .map(i => parseFloat(i.value.replace('%','').replace(/,/g, '')))
+                .filter(v => !isNaN(v));
+            return vals.length > 0 ? (type === 'min' ? Math.min(...vals) : Math.max(...vals)) : NaN;
+        };
+
+        const hb = getWorstValue('track-hb', 'min');
+        const plt = getWorstValue('track-plt', 'min');
+        const ldh = getWorstValue('track-ldh', 'max');
+        const scr = getWorstValue('track-scr', 'max');
+        const hap = getWorstValue('track-hap', 'min');
+
+        const pt = parseFloat(document.getElementById('in_pt_count')?.value) || 0;
+        const pe = parseFloat(document.getElementById('in_pe_count')?.value) || 0;
+        const hd = !!document.getElementById('in_hd_count')?.value;
+        const adamts = parseFloat(document.getElementById('in_adamts')?.value?.replace('%',''));
+        
+        const renalSys = document.getElementById('in_renal_sys')?.value;
+        const giSys = document.getElementById('in_gi_sys')?.value;
+        const neuroSys = document.getElementById('in_neuro_sys')?.value;
+        const respSys = document.getElementById('in_resp_sys')?.value;
+        const heartSys = document.getElementById('in_heart_sys')?.value;
+
+        const inf_pneumo = document.getElementById('in_inf_2')?.value === 'Negative';
+        const inf_flu = document.getElementById('in_inf_3')?.value === 'Negative';
+        const inf_stec = document.getElementById('in_inf_1')?.value === 'Negative';
+        const dic_fib = parseFloat(document.getElementById('in_dic_fib')?.value);
+        const aps_la = document.getElementById('in_aps_la')?.value === 'Negative';
+        const cob = document.getElementById('in_cob_0')?.value === 'Normal Range';
+        const drug = document.getElementById('in_drug_0')?.value === '排除';
+        const hellp = document.getElementById('in_drug_5')?.value === '排除';
+        const malignant_htn = document.getElementById('in_drug_4')?.value === '排除';
+
+        const schistocyte_val = document.getElementById('in_schisto')?.value === 'Postive';
+        const renal_biopsy_val = document.getElementById('in_renal_biopsy')?.value === 'Thrombosis';
+        const other_biopsy_val = document.getElementById('in_other_biopsy')?.value === 'Thrombosis';
+
+        let totalPoints = 0;
+        let matchPoints = 0;
+
+        function renderCheck(listId, items, atLeastOneMode = false) {
+            const container = document.getElementById(listId);
+            if (!container) return;
+            
+            const blockTotalWeight = items.reduce((acc, i) => acc + i.weight, 0);
+            totalPoints += blockTotalWeight;
+
+            if (atLeastOneMode) {
+                const anyMatched = items.some(i => i.val);
+                if (anyMatched) matchPoints += blockTotalWeight;
+            } else {
+                items.forEach(item => { if (item.val) matchPoints += item.weight; });
+            }
+
+            let html = '';
+            items.forEach(item => {
+                html += `<div class="check-item">
+                    <span class="check-icon">${item.val ? '✅' : '❌'}</span>
+                    <span class="check-text ${item.val ? 'text-slate-800' : 'text-slate-400'}">${item.label}</span>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        renderCheck('list-eligibility', [
+            { label: "最近一週已施行至少 4 次 PE/PT 治療", val: (pt + pe >= 4), weight: 1.5 },
+            { label: "血小板數值仍出現 < 150,000/μL", val: (plt < 150), weight: 1 },
+            { label: "LDH 數值超過正常上限值 (ULN)", val: (ldh > 271), weight: 1 },
+            { label: "sCr ≥ ULN for age 或 須緊急透析", val: (scr > 1.3 || hd), weight: 1 }
+        ], false);
+
+        renderCheck('list-essential', [
+            { label: "溶血性貧血 (Hb < 10.0 g/dL)", val: (hb < 10.0), weight: 1 },
+            { label: "血小板減少 (Plt < 150,000/μL)", val: (plt < 150), weight: 1 },
+            { label: "血清 LDH 升高 (高於醫院正常值)", val: (ldh > 271), weight: 1 },
+            { label: "Haptoglobin 降低 (低於標準值或不可測)", val: (hap < 30), weight: 1 }
+        ], false);
+
+        renderCheck('list-tma-判定', [
+            { label: "Schistocyte(%) (必要)", val: schistocyte_val, weight: 1 },
+            { label: "Renal biopsy (視情況)", val: renal_biopsy_val, weight: 0.5 },
+            { label: "Other biopsy (視情況)", val: other_biopsy_val, weight: 0.5 }
+        ], true);
+
+        renderCheck('list-organ-damage', [
+            { label: "急性腎衰竭 (AKI 2期以上/緊急透析)", val: (renalSys && renalSys !== '無異常' && renalSys !== 'AKI第一期'), weight: 0.5 },
+            { label: "腦血管病變 (抽蓄/栓塞/腦部病變)", val: (neuroSys && neuroSys !== '無異常'), weight: 0.5 },
+            { label: "心臟障礙 (心衰竭/心肺障礙/心律異常)", val: (heartSys && heartSys !== '無異常'), weight: 0.5 },
+            { label: "呼吸障礙 (呼吸衰竭/換氣困難)", val: (respSys && respSys !== '無異常'), weight: 0.5 },
+            { label: "腸胃障礙 (腸破裂/缺血性腸炎/血便)", val: (giSys && giSys !== '無異常' && giSys !== '腹痛、噁心、嘔吐'), weight: 0.5 }
+        ], true);
+
+        renderCheck('list-exclusion-detail', [
+            { label: "排除 肺炎鏈球菌或流感病毒感染 (Pneumo/Flu)", val: (inf_pneumo && inf_flu), weight: 0.5 },
+            { label: "排除 TTP (ADAMTS13 活性 ≥ 10%)", val: (adamts >= 10), weight: 2.0 },
+            { label: "排除 志賀氏毒素大腸桿菌感染 (STEC-HUS)", val: (inf_stec), weight: 0.5 },
+            { label: "排除 HELLP syndrome (溶血、肝酵素上升等)", val: (hellp), weight: 0.5 },
+            { label: "排除 藥物誘發之 HUS (如 CNI, Chemo 等)", val: (drug), weight: 0.5 },
+            { label: "排除 其他 TMA 因素 (如惡性高血壓/APS/DIC)", val: (aps_la && malignant_htn && (dic_fib >= 200 || isNaN(dic_fib))), weight: 0.5 },
+            { label: "排除 代謝性 Cobalamin C 欠損", val: (cob), weight: 0.5 }
+        ], false);
+
+        const percent = Math.min(Math.round((matchPoints / totalPoints) * 100), 100);
+        const gauge = document.getElementById('nhi-gauge-progress');
+        if (gauge) gauge.style.strokeDashoffset = 276.4 - (276.4 * percent / 100);
+        const percentText = document.getElementById('nhi-percent-text');
+        if (percentText) percentText.innerText = percent + "%";
+
+        const statusBox = document.getElementById('nhi-status-box');
+        const statusMsg = document.getElementById('nhi-status-msg');
+
+        if (statusBox && statusMsg) {
+            if(percent < 50) {
+                statusBox.className = "inline-block px-4 py-1.5 rounded-lg bg-red-100 text-red-700 font-bold text-sm mb-2 border border-red-200";
+                statusBox.innerText = "仍需更多證據";
+                statusMsg.innerText = "目前填寫數值與健保門檻契合度較低，關鍵數據（如反應不佳判定或排除診斷）仍未齊全。";
+            } else if (percent < 75) {
+                statusBox.className = "inline-block px-4 py-1.5 rounded-lg bg-amber-100 text-amber-700 font-bold text-sm mb-2 border border-amber-200";
+                statusBox.innerText = "建議積極排查";
+                statusMsg.innerText = "符合主要臨床特徵，建議針對標註紅叉的排除診斷項或溶血證據項（如 Hapto）進行補充。";
+            } else {
+                statusBox.className = "inline-block px-4 py-1.5 rounded-lg bg-green-100 text-green-700 font-bold text-sm mb-2 border border-green-200";
+                statusBox.innerText = "符合度高建議送審";
+                statusMsg.innerText = "臨床數據與條文高度吻合，必要條件與排除要件均核對完畢，建議備齊報告送件。";
+            }
+        }
+    }
+
+    function initCharts() {
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        const cfg = (l, c) => ({ 
+            type: 'line', data: { labels: ['T1','T2','T3','T4','T5'], datasets: [{ label: l, borderColor: c, backgroundColor: c + '15', data: [null,null,null,null,null], fill: true, tension: 0.4 }] }, 
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+        charts.hb = new Chart(document.getElementById('chart-hb'), cfg('Hb', '#009844'));
+        const pltCfg = cfg('Plt', '#ef4444'); pltCfg.plugins = [plateletAlertPlugin];
+        charts.plt = new Chart(document.getElementById('chart-plt'), pltCfg);
+        charts.retic = new Chart(document.getElementById('chart-retic'), cfg('Retic', '#10b981'));
+        charts.scr = new Chart(document.getElementById('chart-scr'), cfg('sCr', '#f59e0b'));
+        charts.ldh = new Chart(document.getElementById('chart-ldh'), cfg('LDH', '#002d56'));
+        charts.hap = new Chart(document.getElementById('chart-hap'), cfg('Hap', '#ec4899'));
+        charts.bp = new Chart(document.getElementById('chart-bp'), {
+            type: 'line',
+            data: {
+                labels: ['T1','T2','T3','T4','T5'],
+                datasets: [
+                    { label: '收縮壓', borderColor: '#002d56', backgroundColor: '#002d5615', data: [null,null,null,null,null], fill: true, tension: 0.4 },
+                    { label: '舒張壓', borderColor: '#64748b', backgroundColor: '#64748b15', data: [null,null,null,null,null], fill: true, tension: 0.4 }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, 
+                plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } } 
+            }
+        });
+    }
+
+    function formatPercent(i) { let v = i.value.replace(/%/g, '').trim(); if (v !== "" && !isNaN(v)) i.value = v + "%"; calculateNHICompliance(); }
+
+    window.onload = function() {
+        const today = new Date().toISOString().split('T')[0];
+        document.querySelectorAll('.auto-date').forEach(i => i.value = today);
+        initCharts(); calculateNHICompliance();
+    };
+</script>
+
+</body>
+</html>
